@@ -17,7 +17,7 @@ You can also search for keywords by selecting **Editor → Quick Docs → Search
 
 ## License
 
-* All documentation by [Mozilla Contributors](https://developer.mozilla.org/), licensed under [CC-BY-SA 2.5](https://creativecommons.org/licenses/by-sa/2.5/)
-* Code by me, licensed under [MIT](https://opensource.org/licenses/MIT)
+* All documentation by [Mozilla Contributors](https://developer.mozilla.org/), licensed under [CC-BY-SA 2.5](https://creativecommons.org/licenses/by-sa/2.5/) / collected from [The content behind MDN Web Docs](https://github.com/mdn/content) github repo
+* Extension code by me, licensed under [MIT](https://opensource.org/licenses/MIT)
 
 This Nova extension is neither affiliated with, supported nor endorsed by MDN or the Mozilla Foundation.
