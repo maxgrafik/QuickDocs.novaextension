@@ -6,14 +6,16 @@
 
 Select an HTML tag or CSS property in the editor and select **Editor → Quick Docs → Show Definition**
 
-![](/Images/readme/quickHTML.png)
-![](/Images/readme/quickCSS.png)
+![](https://raw.githubusercontent.com/maxgrafik/QuickDocs.novaextension/main/Images/readme/quickHTML.png)
+![](https://raw.githubusercontent.com/maxgrafik/QuickDocs.novaextension/main/Images/readme/quickCSS.png)
+
 
 Clicking the "Read more" button opens the according page from developer.mozilla.org in your browser.
 
 You can also search for keywords by selecting **Editor → Quick Docs → Search …**
 
-![](/Images/readme/quickSearch.png)
+![](https://raw.githubusercontent.com/maxgrafik/QuickDocs.novaextension/main/Images/readme/quickSearch.png)
+
 
 ## License
 
