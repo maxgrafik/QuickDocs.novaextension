@@ -2,19 +2,25 @@
     "identifier": "maxgrafik.QuickDocs",
     "name": "Quick Docs",
     "organization": "Hendrik Meinl",
-    "description": "Quick documentation of HTML tags and CSS properties from MDN Web Docs.",
-    "version": "1.0",
+    "description": "Search MDN Web Docs",
+    "version": "1.1",
     "categories": ["commands"],
     "bugs": "https://github.com/maxgrafik/QuickDocs.novaextension/issues",
     "repository": "https://github.com/maxgrafik/QuickDocs.novaextension",
-    "license": "see Readme",
+    "license": "MIT",
 
     "main": "main.js",
 
     "activationEvents": [
         "onLanguage:html",
-        "onLanguage:css"
+        "onLanguage:css",
+        "onLanguage:javascript"
     ],
+
+    "entitlements": {
+        "requests": true,
+        "filesystem": "readwrite"
+    },
 
     "commands": {
         "editor": [
@@ -23,15 +29,15 @@
                 "command": "maxgrafik.QuickDocs.show",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["html","css"]
+                    "syntaxes": ["html","css","javascript"]
                 }
             },
             {
-                "title": "Search …",
-                "command": "maxgrafik.QuickDocs.search",
+                "title": "Search MDN …",
+                "command": "maxgrafik.QuickDocs.searchMDN",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["html","css"]
+                    "syntaxes": ["html","css","javascript"]
                 }
             }
         ]

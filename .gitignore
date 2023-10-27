@@ -1,5 +1,5 @@
 .DS_Store
 .nova
-package.json
+.eslintrc.json
 ScrapeMDN
 Tests

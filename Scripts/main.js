@@ -1,8 +1,45 @@
 "use strict";
 
+let MDNSearchIndex = null;
+
 exports.activate = function() {
-    // Do work when the extension is activated
+
+    /**
+     * Read MDN search index from disk (if available)
+     * or load fresh copy from developer.mozilla.org
+     */
+
+    try {
+        const filePath = nova.path.join(nova.fs.tempdir, "MDNSearchIndex.json");
+        const fileStat = nova.fs.stat(filePath);
+
+        if (
+            nova.fs.access(filePath, nova.fs.F_OK + nova.fs.R_OK) &&
+            fileStat.isFile() &&
+            fileStat.mtime.getTime() > (Date.now() - (24*60*60*1000))
+        ) {
+            console.log("Reading MDN search index from disk ...");
+            const fileObj = nova.fs.open(filePath, "r");
+            const data = fileObj.read();
+            fileObj.close();
+            MDNSearchIndex = JSON.parse(data);
+
+        } else {
+            console.log("Fetching MDN search index ...");
+            fetch("https://developer.mozilla.org/en-US/search-index.json")
+                .then((response) => response.text())
+                .then(text => {
+                    const fileObj = nova.fs.open(filePath, "w");
+                    fileObj.write(text);
+                    fileObj.close();
+                    MDNSearchIndex = JSON.parse(text);
+                });
+        }
+    } catch (error) {
+        console.log(error);
+    }
 };
+
 
 exports.deactivate = function() {
     // Clean up state before the extension is deactivated
@@ -40,7 +77,7 @@ nova.commands.register("maxgrafik.QuickDocs.show", editor => {
         }
 
         if (key) {
-            key = (key === "h") ? "heading_elements" : key;
+            key = (key === "h") ? "h1" : key;
             getDefinition("html", key);
         }
 
@@ -50,98 +87,84 @@ nova.commands.register("maxgrafik.QuickDocs.show", editor => {
 
         const propertyRegex = /(?<prop>[a-z-]+)(?::|\s)/g;
         const atRuleRegex   = /(?<at>@[a-z-]+)(?:\s|\{)/g;
-        const pseudoRegex   = /:{1,2}(?<pseudo>[a-z-]+)/g;
+        const pseudoRegex   = /(?<pseudo>:{1,2}[a-z-]+)/g;
 
         const propertyMatch = [...line.matchAll(propertyRegex)];
         const atRuleMatch   = [...line.matchAll(atRuleRegex)];
         const pseudoMatch   = [...line.matchAll(pseudoRegex)];
 
-        let file = null;
         let key = null;
 
         const matches = [].concat(atRuleMatch, pseudoMatch, propertyMatch);
-
         for (const match of matches) {
             if (cursorPosition >= match.index && cursorPosition <= (match.index + match[0].length)) {
                 key = match.groups.at || match.groups.pseudo || match.groups.prop;
-                const c = match[0].charAt(0);
-                file = (c === "@")
-                    ? "css-at-rules"
-                    : (
-                        (c === ":")
-                            ? "css-pseudo"
-                            : "css"
-                    );
                 break;
             }
         }
 
-        if (file && key) {
-            getDefinition(file, key);
+        if (key) {
+            getDefinition("css", key);
         }
+
+    } else if (editor.document.syntax === "javascript") {
+        searchMDN();
     }
 });
 
-nova.commands.register("maxgrafik.QuickDocs.search", editor => {
-
-    let docs = [];
-
-    if (editor.document.syntax === "html") {
-        const html = require("./docs/html.json");
-        const htmlAttr = require("./docs/html-attr.json");
-        const htmlGlob = require("./docs/html-glob.json");
-        docs = Object.assign({}, html, htmlAttr, htmlGlob);
-
-    } else if (editor.document.syntax === "css") {
-        const css = require("./docs/css.json");
-        const cssAtRules = require("./docs/css-at-rules.json");
-        const cssPseudo = require("./docs/css-pseudo.json");
-        docs = Object.assign({}, css, cssAtRules, cssPseudo);
-    }
-
-    const choices = [];
-    const keys = Object.keys(docs);
-    for (const key of keys) {
-        choices.push(docs[key].title);
-    }
-
-    choices.sort();
-
-    nova.workspace.showChoicePalette(choices, {placeholder: "Search Quick Docs"}, (choice) => {
-        for (const key of keys) {
-            if (docs[key].title === choice) {
-                showNotification(docs[key]);
-                break;
-            }
-        }
-    });
+nova.commands.register("maxgrafik.QuickDocs.searchMDN", () => {
+    searchMDN();
 });
 
-function getDefinition(file, key) {
-    const doc = require("./docs/" + file + ".json");
-    const def = doc[key];
-    if (def) {
-        showNotification(def);
+function searchMDN() {
+    if (MDNSearchIndex) {
+        nova.workspace.showChoicePalette(
+            MDNSearchIndex.map(entry => entry.title),
+            {placeholder: "Search MDN"},
+            (choice) => {
+                for (const entry of MDNSearchIndex) {
+                    if (entry.title === choice && entry.url) {
+                        nova.openURL("https://developer.mozilla.org" + entry.url);
+                        break;
+                    }
+                }
+            });
+    } else {
+        console.log("Error reading MDN search index");
     }
 }
 
-function showNotification(def) {
-    let summary = def.summary;
-    if (def.values) {
-        summary = summary + "\n\nValues:\n" + def.values.join(" | ");
+function getDefinition(file, key) {
+
+    if (!MDNSearchIndex) {
+        console.log("Error reading MDN search index");
+        return;
     }
 
-    const request = new NotificationRequest();
-    request.title = def.title;
-    request.body = summary + "\n";
-    request.actions = ["Read more", "OK"];
-
-    const promise = nova.notifications.add(request);
-    promise.then(reply => {
-        if (reply.actionIdx === 0) {
-            nova.openURL(def.url);
+    if (file === "html") {
+        for (const entry of MDNSearchIndex) {
+            if (
+                entry.title.startsWith("<"+key+">") &&
+                entry.url
+            ) {
+                nova.openURL("https://developer.mozilla.org" + entry.url);
+                return;
+            }
         }
-    }, error => {
-        console.error(error);
-    });
+
+    } else if (file === "css") {
+        for (const entry of MDNSearchIndex) {
+            if (
+                entry.title.startsWith(key) &&
+                entry.url &&
+                entry.url.startsWith("/en-US/docs/Web/CSS/")
+            ) {
+                nova.openURL("https://developer.mozilla.org" + entry.url);
+                return;
+            }
+        }
+    }
+
+    // if all fails, show search palette
+    searchMDN();
 }
