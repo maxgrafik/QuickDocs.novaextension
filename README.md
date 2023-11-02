@@ -6,7 +6,7 @@
 
 Select an HTML tag or CSS property in the editor and choose **Editor → Quick Docs → Show Definition**. This opens the according page from developer.mozilla.org in your browser.
 
-You can also search MDN by selecting **Editor → Quick Docs → Search MDN …**
+You can also search MDN by selecting **Editor → Quick Docs → Search …**
 
 ## Disclaimer
 

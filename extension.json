@@ -2,7 +2,7 @@
     "identifier": "maxgrafik.QuickDocs",
     "name": "Quick Docs",
     "organization": "Hendrik Meinl",
-    "description": "Search MDN Web Docs",
+    "description": "Search MDN Web Docs and PHP.net",
     "version": "1.1",
     "categories": ["commands"],
     "bugs": "https://github.com/maxgrafik/QuickDocs.novaextension/issues",
@@ -14,7 +14,8 @@
     "activationEvents": [
         "onLanguage:html",
         "onLanguage:css",
-        "onLanguage:javascript"
+        "onLanguage:javascript",
+        "onLanguage:php"
     ],
 
     "entitlements": {
@@ -29,15 +30,15 @@
                 "command": "maxgrafik.QuickDocs.show",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["html","css","javascript"]
+                    "syntaxes": ["html","css","javascript","php"]
                 }
             },
             {
-                "title": "Search MDN …",
-                "command": "maxgrafik.QuickDocs.searchMDN",
+                "title": "Search …",
+                "command": "maxgrafik.QuickDocs.search",
                 "when": "editorHasFocus",
                 "filters": {
-                    "syntaxes": ["html","css","javascript"]
+                    "syntaxes": ["html","css","javascript","php"]
                 }
             }
         ]
