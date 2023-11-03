@@ -204,6 +204,31 @@ function getDefinition(file, key) {
 
 async function getSearchIndex(source, lifetime) {
 
+    let tempdir = null;
+
+    /**
+     * Check, whether persistent 'Cache' folder exists
+     * Try to create, if necessary
+     * Fall back to nova.fs.tempdir (non-persistent)
+     */
+
+    try {
+        const globalStoragePath = nova.extension.globalStoragePath;
+        if (!nova.fs.stat(globalStoragePath)) {
+            console.log("Creating extension folder");
+            nova.fs.mkdir(globalStoragePath);
+        }
+        tempdir = nova.path.join(globalStoragePath, "Cache");
+        if (!nova.fs.stat(tempdir)) {
+            console.log("Creating cache folder");
+            nova.fs.mkdir(tempdir);
+        }
+    } catch (error) {
+        console.log(error);
+        console.log("Creating folder failed. Using tempdir.");
+        tempdir = nova.fs.tempdir;
+    }
+
     /**
      * Read search index from disk (if available)
      * or load fresh copy from web
@@ -221,7 +246,7 @@ async function getSearchIndex(source, lifetime) {
         break;
     }
 
-    const filePath = nova.path.join(nova.fs.tempdir, source + ".json");
+    const filePath = nova.path.join(tempdir, source + ".json");
     const fileStat = nova.fs.stat(filePath);
 
     if (nova.fs.access(filePath, nova.fs.F_OK + nova.fs.R_OK) && fileStat.isFile()) {
