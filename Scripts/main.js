@@ -32,7 +32,7 @@ nova.commands.register("maxgrafik.QuickDocs.show", editor => {
         if (editor.document.syntax === "php") {
             searchPHP();
         } else {
-            searchMDN();
+            searchMDN(editor.document.syntax);
         }
         return;
     }
@@ -60,7 +60,7 @@ nova.commands.register("maxgrafik.QuickDocs.show", editor => {
             getDefinition("html", key);
         } else {
             // Nothing to search for -> show search palette
-            searchMDN();
+            searchMDN("html");
         }
 
     } else if (editor.document.syntax === "css") {
@@ -69,18 +69,24 @@ nova.commands.register("maxgrafik.QuickDocs.show", editor => {
 
         const propertyRegex = /(?<prop>[a-z-]+)(?::|\s)/g;
         const atRuleRegex   = /(?<at>@[a-z-]+)(?:\s|\{)/g;
-        const pseudoRegex   = /(?<pseudo>:{1,2}[a-z-]+)/g;
+        const pseudoRegex   = /(?<pseudo>:{1,2}[a-z-]+)(?<val>\([^)]*\))?/g;
+        const funcRegex     = /(?<func>[a-z-]+)(?<val>\([^)]*\))/g;
 
         const propertyMatch = [...line.matchAll(propertyRegex)];
         const atRuleMatch   = [...line.matchAll(atRuleRegex)];
         const pseudoMatch   = [...line.matchAll(pseudoRegex)];
+        const funcMatch     = [...line.matchAll(funcRegex)];
 
         let key = null;
 
-        const matches = [].concat(atRuleMatch, pseudoMatch, propertyMatch);
+        /**
+         * DONT CHANGE! The order is important!
+         */
+        const matches = [].concat(atRuleMatch, pseudoMatch, propertyMatch, funcMatch);
         for (const match of matches) {
             if (cursorPosition >= match.index && cursorPosition <= (match.index + match[0].length)) {
-                key = match.groups.at || match.groups.pseudo || match.groups.prop;
+                key = match.groups.at || match.groups.pseudo || match.groups.prop || match.groups.func;
+                key += match.groups.val ? "()" : "";
                 break;
             }
         }
@@ -89,7 +95,7 @@ nova.commands.register("maxgrafik.QuickDocs.show", editor => {
             getDefinition("css", key);
         } else {
             // Nothing to search for -> show search palette
-            searchMDN();
+            searchMDN("css");
         }
 
     } else if (editor.document.syntax === "javascript") {
@@ -113,18 +119,42 @@ nova.commands.register("maxgrafik.QuickDocs.search", editor => {
 });
 
 
-function searchMDN() {
+function searchMDN(syntax) {
     if (
         typeof MDNSearchIndex === "object" &&
         MDNSearchIndex !== null
     ) {
+        const choices = MDNSearchIndex.filter((item) => {
+            switch (syntax) {
+            case "html":
+                return item.url.startsWith("/en-US/docs/Web/HTML");
+            case "css":
+                return item.url.startsWith("/en-US/docs/Web/CSS");
+            default:
+                return true;
+            }
+        });
+
+        choices.sort((a, b) => {
+            switch (syntax) {
+            case "html":
+                return a.title.localeCompare(b.title);
+            case "css":
+                a = a.title.replace(/^[^A-Za-z]*/, "");
+                b = b.title.replace(/^[^A-Za-z]*/, "");
+                return a.localeCompare(b, "en", {caseFirst: "lower"});
+            default:
+                return 0;
+            }
+        });
+
         nova.workspace.showChoicePalette(
-            MDNSearchIndex.map(entry => entry.title),
+            choices.map(item => item.title),
             {placeholder: "Search developer.mozilla.org"},
             (choice) => {
-                for (const entry of MDNSearchIndex) {
-                    if (entry.title === choice && entry.url) {
-                        nova.openURL("https://developer.mozilla.org" + entry.url);
+                for (const item of choices) {
+                    if (item.title === choice && item.url) {
+                        nova.openURL("https://developer.mozilla.org" + item.url);
                         break;
                     }
                 }
@@ -141,18 +171,21 @@ function searchPHP() {
     ) {
         const choices = [];
         for (const value of Object.values(PHPSearchIndex)) {
-            //choices.push(value[0] + " • " + value[1]);
+            //choices.push(value[0] + "\n" + value[1]); // nope, doesn't work :P
             choices.push(value[0]);
         }
 
-        choices.sort((a, b) => a.toLowerCase().localeCompare(b.toLowerCase()));
+        choices.sort((a, b) => {
+            a = a.replace(/^[^A-Za-z]*/, "");
+            b = b.replace(/^[^A-Za-z]*/, "");
+            return a.localeCompare(b, "en", {caseFirst: "lower"});
+        });
 
         nova.workspace.showChoicePalette(
             choices,
             {placeholder: "Search PHP.net"},
             (choice) => {
                 for (const [key, value] of Object.entries(PHPSearchIndex)) {
-                    //if (choice === (value[0] + " • " + value[1])) {
                     if (choice === value[0]) {
                         nova.openURL("https://www.php.net/manual/en/" + key);
                         break;
@@ -164,7 +197,7 @@ function searchPHP() {
     }
 }
 
-function getDefinition(file, key) {
+function getDefinition(syntax, key) {
 
     if (
         typeof MDNSearchIndex !== "object" ||
@@ -174,32 +207,32 @@ function getDefinition(file, key) {
         return;
     }
 
-    if (file === "html") {
-        for (const entry of MDNSearchIndex) {
+    if (syntax === "html") {
+        for (const item of MDNSearchIndex) {
             if (
-                entry.title.startsWith("<"+key+">") &&
-                entry.url
+                item.title.startsWith("<"+key+">") &&
+                item.url
             ) {
-                nova.openURL("https://developer.mozilla.org" + entry.url);
+                nova.openURL("https://developer.mozilla.org" + item.url);
                 return;
             }
         }
 
-    } else if (file === "css") {
-        for (const entry of MDNSearchIndex) {
+    } else if (syntax === "css") {
+        for (const item of MDNSearchIndex) {
             if (
-                entry.title.startsWith(key) &&
-                entry.url &&
-                entry.url.startsWith("/en-US/docs/Web/CSS/")
+                item.title === key &&
+                item.url &&
+                item.url.startsWith("/en-US/docs/Web/CSS/")
             ) {
-                nova.openURL("https://developer.mozilla.org" + entry.url);
+                nova.openURL("https://developer.mozilla.org" + item.url);
                 return;
             }
         }
     }
 
     // If all fails -> show search palette
-    searchMDN();
+    searchMDN(syntax);
 }
 
 async function getSearchIndex(source, lifetime) {
