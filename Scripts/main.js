@@ -5,11 +5,11 @@ let PHPSearchIndex = null;
 
 exports.activate = function() {
 
-    getSearchIndex("MDN", 1).then((data) => {
+    getSearchIndex("MDN").then((data) => {
         MDNSearchIndex = data;
     });
 
-    getSearchIndex("PHP", 14).then((data) => {
+    getSearchIndex("PHP").then((data) => {
         PHPSearchIndex = data;
     });
 };
@@ -235,7 +235,7 @@ function getDefinition(syntax, key) {
     searchMDN(syntax);
 }
 
-async function getSearchIndex(source, lifetime) {
+async function getSearchIndex(source) {
 
     let tempdir = null;
 
@@ -301,7 +301,7 @@ async function getSearchIndex(source, lifetime) {
         if (
             typeof searchIndex === "object" &&
             searchIndex !== null &&
-            fileStat.mtime.getTime() > (Date.now() - (lifetime*24*60*60*1000))
+            fileStat.mtime.getTime() > (Date.now() - (7*24*60*60*1000)) // 7 days
         ) {
             console.log(source + " search available (cached)");
             return Promise.resolve(searchIndex);
